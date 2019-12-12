@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QApplication, QDialog,
                              QProgressBar, QPushButton)
                              
 class Parse(QThread):
-	listChanged = pyqtSignal(list, list, list, list)
+	listChanged = pyqtSignal(list, list, list, list, list)
 	
 	def  __init__(self, _query):
 		QThread.__init__(self)
@@ -32,7 +32,8 @@ class Parse(QThread):
 		self.titles = []
 		self.seeders = []
 		self.leechers = []
-		
+		self.desc = []
+
 		for link in soup.find_all('a', href=True):
 			if link['href'][:7] == "magnet:":
 				self.magnets.append(link['href'])
@@ -57,5 +58,10 @@ class Parse(QThread):
 				else:
 					self.leechers.append(all_seed[x+1])
 					leech = False
-					
-		self.listChanged.emit(self.titles, self.magnets, self.seeders, self.leechers)
+		
+		for x in soup.find_all('font'):
+			x = str(x)
+			a = x.replace(", ULed by", "").replace(",", ">").replace("Uploaded", ">").replace("<", ">").split(">")
+			self.desc.append(a[4].replace("Size", "Size:") + "Uploaded by: " + a[6])
+		
+		self.listChanged.emit(self.titles, self.magnets, self.seeders, self.leechers, self.desc)

@@ -1,26 +1,28 @@
 import libtorrent as lt
 import time
 import itertools
+import magneturi
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QDialog,
                              QProgressBar, QPushButton)
+import notifier
 kill = False
 started = False
 pause = False
+notify = False
 logpath = ""
 que = []
 indexing = 1
 
-##Fix later##
-def animate(msg):
-	global started
-	for c in itertools.cycle(['|', '/', '-', '\\']):
-		TorrentInfoBar.setText(msg + " " + c)
-		time.sleep(0.1)
-		if started:
-				break
+def set_notification(notify_):
+	global notify
+	notify = notify_
+
+def torrent_to_magnet(file):
+	magnet = magneturi.from_torrent_file(file) 
+	return magnet
 
 def remove_item_que(index, all_items=False):
 	global que
@@ -70,12 +72,14 @@ class Torrent(QThread):
 		self.wait()	
 	
 	def run(self):
-		global started, kill, pause, logpath, que, indexing
+		global started, kill, pause, logpath, que, indexing, notify
 		print(que)
 		ses = lt.session()
 		ses.listen_on(6881, 6891)
 		if self.path == "":
 			self.statusChanged.emit("Invalid path")
+			self.countChanged.emit(0)
+			self.countChanged.emit(101)
 			return
 		params = {
 			'save_path': self.path}
@@ -163,6 +167,8 @@ class Torrent(QThread):
 		self.countChanged.emit(100)
 		self.statusChanged.emit("Download complete")
 		print("Done torrenting")
+		if notify == True:
+			notifier.notify()
 		self.listChanged.emit(0, "")
 		if que != []:
 			time.sleep(3)
@@ -170,6 +176,7 @@ class Torrent(QThread):
 				self.rerun(que[indexing], self.path)
 			except:
 				self.countChanged.emit(0)
+				self.countChanged.emit(101)
 				self.statusChanged.emit("Status: Idle")
+				que = []
 				return
-	

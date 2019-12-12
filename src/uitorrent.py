@@ -14,20 +14,20 @@ import libtorrent
 import win32com.shell.shell as shell
 import time
 import urllib.request
+import vpn
+import threading
+import requests
+import json
+import admin
+import notifier
+
 magnets = []
 names = []
 leechers = []
+descs = []
 paused = False
+notify = False
 path = ""
-
-def setAssoc():
-    ASADMIN = 'asadmin'
-    script = os.path.abspath(sys.argv[0])
-    params = ' '.join([script] + sys.argv[1:] + [ASADMIN])
-    shell.ShellExecuteEx(lpVerb='runas', lpFile=sys.executable, lpParameters=params)
-    subprocess.call("REG ADD HKEY_CLASSES_ROOT\\Magnet\\shell\\open\\command /d \""+sys.argv[0]+" %1 /SHELLASSOC\" /f", shell=True)
-    time.sleep(1)
-    sys.exit()
 
 DEFAULT_STYLE = """
 QProgressBar{
@@ -51,10 +51,30 @@ def install():
         urllib.request.urlretrieve("https://i.postimg.cc/gch5HCtw/kmtorrentlogo.png", os.getenv('APPDATA')+"\\kmt\\images\\KmTorrentLogo.png")
         urllib.request.urlretrieve("https://i.postimg.cc/LXGZhwdL/KmIcon.png", os.getenv('APPDATA')+"\\kmt\\images\\icon.png")   
     except:
-        pass
-
+        return False
 
 class Ui_MainWindow(object):
+    def setAssoc(self):
+        if not admin.isUserAdmin():
+            msgBox = QtWidgets.QMessageBox()
+            msgBox.setIcon(QtWidgets.QMessageBox.Question)
+            msgBox.setText("Set Association")
+            msgBox.setInformativeText("This feature requires elevated privilieges\nrun this feature in admin mode?")
+            msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.No)
+            reply = msgBox.exec_()
+            if reply == QtWidgets.QMessageBox.Yes:
+                admin.runAsAdmin(cmdLine=[sys.argv[0]]+["ADMIN"])
+
+            elif reply == QtWidgets.QMessageBox.No:
+                return
+        else:
+            change_regedit()
+
+    def resizeEvent(self, event):
+        MainWindow.resize(705, 496)
+        QtGui.QMainWindow.resizeEvent(self, event)
+
     def setupUi(self, MainWindow):
         global path
         MainWindow.setObjectName("MainWindow")
@@ -75,9 +95,7 @@ class Ui_MainWindow(object):
         
         pic = QtWidgets.QLabel(MainWindow)
         pic.setGeometry(12, 25, 477, 65)
-        #use full ABSOLUTE path to the image, not relative
         pic.setPixmap(QtGui.QPixmap(os.getenv('APPDATA')+"/kmt/images/KmTorrentLogo.png"))
-        
         
         self.TorrentProgress = QtWidgets.QProgressBar(self.centralwidget)
         self.TorrentProgress.setGeometry(QtCore.QRect(2, 424, 480, 27))
@@ -178,11 +196,15 @@ class Ui_MainWindow(object):
         self.menubar.setObjectName("menubar")
         self.menuMain = QtWidgets.QMenu(self.menubar)
         
+        self.menuTorrent = QtWidgets.QMenu(self.menubar)
+        self.menuTorrent.setObjectName("menuTorrent")
         self.menuSettings = QtWidgets.QMenu(self.menubar)
         self.menuSettings.setObjectName("menuSettings")
         self.menuWeb = QtWidgets.QMenu(self.menubar)
         self.menuWeb.setObjectName("menuWeb")
-        
+        self.menuVPN = QtWidgets.QMenu(self.menubar)
+        self.menuVPN.setObjectName("menuVPN")
+
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -194,24 +216,42 @@ class Ui_MainWindow(object):
         self.actionLog = QtWidgets.QAction(MainWindow)
         self.actionLog.setObjectName("actionLog")
         
+        self.actionDownload = QtWidgets.QAction(MainWindow)
+        self.actionDownload.setObjectName("actionDownload")
+
+        self.actionDownloadUrl = QtWidgets.QAction(MainWindow)
+        self.actionDownloadUrl.setObjectName("actionDownloadUrl")
+
         self.actionGit = QtWidgets.QAction(MainWindow)
         self.actionGit.setObjectName("actionGit")
 
         self.actionASSOC = QtWidgets.QAction(MainWindow)
         self.actionASSOC.setObjectName("actionASSOC")
 
+        self.actionNotification = QtWidgets.QAction(MainWindow, checkable=True)
+        self.actionNotification.setObjectName("actionNotification")
+
         self.actionDEFAULTDIR = QtWidgets.QAction(MainWindow)
         self.actionDEFAULTDIR.setObjectName("actionDEFAULTDIR")
 
+        self.actionVPN = QtWidgets.QAction(MainWindow)
+        self.actionVPN.setObjectName("actionVPN")
+
+        self.menuWeb.addAction(self.actionGit)
         self.menuSettings.addAction(self.OpenFolder)
         self.menuSettings.addAction(self.actionLog)
         self.menuSettings.addAction(self.actionASSOC)
         self.menuSettings.addAction(self.actionDEFAULTDIR)
-        self.menuWeb.addAction(self.actionGit)
+        self.menuSettings.addAction(self.actionNotification)
+        self.menuTorrent.addAction(self.actionDownload)
+        self.menuTorrent.addAction(self.actionDownloadUrl)
+        self.menuVPN.addAction(self.actionVPN)
         
+        self.menubar.addAction(self.menuTorrent.menuAction())
         self.menubar.addAction(self.menuMain.menuAction())
         self.menubar.addAction(self.menuSettings.menuAction())
         self.menubar.addAction(self.menuWeb.menuAction())
+        self.menubar.addAction(self.menuVPN.menuAction())
 		
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -220,25 +260,42 @@ class Ui_MainWindow(object):
         self.StartSearch.clicked.connect(lambda: self.get_results(self.SearchInput.text()))
         self.SearchRes.itemClicked.connect(lambda: self.on_enter())
         self.actionLog.triggered.connect(lambda: self.set_logging())
+        
         self.AddQue.clicked.connect(lambda: self.add_to_que())
         self.RemQue.clicked.connect(lambda: self.rem_que())
+        
         self.OpenFolder.triggered.connect(lambda: self.open_default_folder())
         self.actionGit.triggered.connect(lambda: self.open_github())
-        self.actionASSOC.triggered.connect(lambda: setAssoc())
+        
+        self.actionDownload.triggered.connect(lambda: self.open_torrent_file())
+        self.actionDownloadUrl.triggered.connect(lambda: self.open_torrent_url())
+
+        self.actionASSOC.triggered.connect(lambda: self.setAssoc())
         self.actionDEFAULTDIR.triggered.connect(lambda: self.set_default_folder())
+        self.actionVPN.triggered.connect(lambda: self.set_vpn())
+        self.actionNotification.triggered.connect(lambda: self.notifier_set())
+
+        MainWindow.setFixedSize(705, 496)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
 
         MainWindow.setWindowTitle("KmTorrent");
+        self.menuTorrent.setTitle(_translate("MainWindow", "Torrent"))
         self.menuSettings.setTitle(_translate("MainWindow", "Settings"))
         self.menuWeb.setTitle(_translate("MainWindow", "Web"))
+        self.menuVPN.setTitle(_translate("MainWindow", "Vpn"))
         
         self.StartTorrent.setText(_translate("MainWindow", "Download Torrents"))
         self.StartSearch.setText(_translate("MainWindow", "Search"))
         self.actionGit.setText(_translate("MainWindow", "Github"))
-        self.actionASSOC.setText(_translate("MainWindow", "Set Magnet Assoc"))
+        self.actionDownload.setText(_translate("MainWindow", "Download .torrent"))
+        self.actionDownloadUrl.setText(_translate("MainWindow", "Download .torrent From URL"))
+        
+        self.actionASSOC.setText(_translate("MainWindow", "Set Associations"))
+        self.actionNotification.setText(_translate("MainWindow", "Notification"))
         self.actionDEFAULTDIR.setText(_translate("MainWindow", "Set Default Folder"))
+        self.actionVPN.setText(_translate("MainWindow", "Connect"))
 
         self.OpenFolder.setText(_translate("MainWindow", "Open Folder"))
         self.actionLog.setText(_translate("MainWindow", "Log"))
@@ -246,12 +303,78 @@ class Ui_MainWindow(object):
         self.RemQue.setText(_translate("MainWindow", "Remove"))
 
         try:
-            if sys.argv[1][:7] != "magnet:":
-                return
-            self.MagnetInput.setText(sys.argv[1])
+            if sys.argv[1][:7] == "magnet:":
+                self.MagnetInput.setText(sys.argv[1])
+
+            if sys.argv[1][-8:] == ".torrent":
+                try:
+                    self.MagnetInput.setText(torrent.torrent_to_magnet(sys.argv[1]))
+                except:
+                    self.TorrentInformation.setText("Invalid .torrent file")
         except:
             pass
 
+    def notifier_set(self):
+        global notify
+        if notify == True:
+            notify = False
+            return
+        if notify == False:
+            notify = True
+            return
+
+    def open_torrent_url(self):
+        msgBox = QtWidgets.QInputDialog()
+        url, ok = msgBox.getText(MainWindow, "Direct torrent download", "Enter torrent url")
+
+        url = str(url)
+        if not ok:
+            return
+
+        try:
+            urllib.request.urlretrieve(url, "temp.torrent")
+        except:
+            self.TorrentInformation.setText("Invalid url")
+        try:
+            self.MagnetInput.setText(torrent.torrent_to_magnet("temp.torrent"))
+            os.remove("temp.torrent")
+        except:
+            self.TorrentInformation.setText("Invalid .torrent file")
+
+    def open_torrent_file(self):
+        fileName = str(QtWidgets.QFileDialog.getOpenFileName(filter="*.torrent")[0])
+        print(fileName)
+        if fileName == "":
+            return
+        try:
+            self.MagnetInput.setText(torrent.torrent_to_magnet(fileName))
+        except:
+            self.TorrentInformation.setText("Invalid .torrent file")
+
+    def set_vpn(self):
+        os.system('rasdial > out')
+        with open("out") as F:
+            result = F.read().encode()
+
+        if self.actionVPN.text() == "Connect":
+            if result == b'No connections\nCommand completed successfully.\n':
+                t1 = threading.Thread(target=vpn.connect)
+                t1.start()
+                self.actionVPN.setText("Disconnect from VPN")
+                self.TorrentInformation.setText("Connecteded to vpn")
+            else:
+                self.TorrentInformation.setText("Already connected to vpn")
+            self.actionVPN.setText("Disconnect")
+        else:
+            if result == b'Connected to\nkamalvpn\nCommand completed successfully.\n':
+                t1 = threading.Thread(target=vpn.disconnect)
+                t1.start()
+                self.actionVPN.setText("Connect to VPN")
+                self.TorrentInformation.setText("Disconnected from vpn")
+            else:
+                self.TorrentInformation.setText("Already disconnected from vpn")
+            self.actionVPN.setText("Connect")
+        os.remove("out")
 
     def set_default_folder(self):
         global path
@@ -273,6 +396,14 @@ class Ui_MainWindow(object):
             subprocess.check_call(['xdg-open', 'https://github.com/KamalDevelopers/KamalTorrent'])
         elif sys.platform == 'win32':
             os.system('start https://github.com/KamalDevelopers/KamalTorrent')
+
+    def getip(self):
+        ip = requests.get('http://ip.42.pl/raw').text
+
+        data = requests.get('http://ip-api.com/json/' + ip).text
+        j = json.loads(data)["country"]
+
+        self.TorrentInformation.setText(ip + "  --  " + j)
 
     def open_default_folder(self):
         print(path)
@@ -316,11 +447,11 @@ class Ui_MainWindow(object):
         torrent.torrent_pause()
 
     def on_enter(self):
-        global magnets, seeders, names, leechers
+        global magnets, seeders, names, leechers, descs
         torrent = self.SearchRes.currentItem().text().replace(" ", "_")
         index = names.index(torrent)
         self.MagnetInput.setText(magnets[index])
-        self.TorrentInformation.setText("Seeders: " + seeders[index] + " Leechers: " + leechers[index])
+        self.TorrentInformation.setText("Seeders: " + seeders[index] + "  Leechers: " + leechers[index] + " " + descs[index])
 	
     def set_output_path(self):
         global path
@@ -332,14 +463,20 @@ class Ui_MainWindow(object):
         if _path != "":
             path = _path
 
-    def onSearchRes(self, _names, _magnets, _seeders, _leechers):
-        global magnets, seeders, names, leechers
+    def onSearchRes(self, _names, _magnets, _seeders, _leechers, _descs):
+        global magnets, seeders, names, leechers, descs
         magnets = _magnets
         seeders = _seeders
         names = _names
         leechers = _leechers
+        descs = _descs
         self.SearchRes.clear()
-        
+
+        if len(seeders) == 0:
+            self.TorrentInformation.setText("No search results found")
+        elif self.TorrentInformation.text() == "No search results found" and len(seeders) != 0:
+            self.TorrentInformation.setText("")
+
         for x in range(0, len(seeders)):
             self.SearchRes.addItem(_names[x].replace("_", " "))
 	
@@ -370,12 +507,15 @@ class Ui_MainWindow(object):
         self.TorrentInformation.setText(value)
 
     def get_results(self, query):
+        if query == "ip[]":
+            self.getip()
+            return
         self.parse_query = pyrateParser.Parse(query)
         self.parse_query.listChanged.connect(self.onSearchRes)
         self.parse_query.start()
 		
     def start_magnet_onclick(self, magnet):
-        global magnets
+        global magnets, notify
         if self.ListOfTorrents.count() == 0:
             self.TorrentInformation.setText("Torrent list empty")
             return
@@ -387,6 +527,7 @@ class Ui_MainWindow(object):
             self.TorrentInformation.setText("Could not open target folder")
             return
         
+        torrent.set_notification(notify)
         self.EndTorrent.show()
         self.PauseTorrent.show()
         self.StartTorrent.hide()
@@ -394,15 +535,36 @@ class Ui_MainWindow(object):
         self.torrent_client.countChanged.connect(self.onCountChanged)
         self.torrent_client.statusChanged.connect(self.onStatusChanged)
         self.torrent_client.start()
-            
+
+def change_regedit():
+    os.system("REG ADD HKEY_CLASSES_ROOT\\Magnet /d \"Magnet URI\" /f")
+    os.system("REG ADD HKEY_CLASSES_ROOT\\Magnet /v \"Content Type\" /d \"application/x-magnet\" /f")
+    os.system("REG ADD HKEY_CLASSES_ROOT\\Magnet /v \"URL Protocol\" /d \"\" /f")
+    os.system("REG ADD HKEY_CLASSES_ROOT\\Magnet\\shell\\open\\command /d \"\""+sys.argv[0]+"\" \"%1\" /SHELLASSOC\" /f")
+    os.system("REG ADD HKEY_CLASSES_ROOT\\Magnet\\shell\\open\\command /d \""+sys.argv[0]+" %1 /SHELLASSOC\" /f")
+    os.system("REG ADD HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.torrent\\OpenWithList /v MRUList /d ba /f")
+    os.system("REG ADD HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.torrent\\OpenWithList /v a /d {1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\OpenWith.exe /f")
+    os.system("REG ADD HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.torrent\\OpenWithList /v b /d uitorrent.exe /f")
+
 if __name__ == "__main__":
     import sys
+    kill = False
     install()
     app = QtWidgets.QApplication(sys.argv)
 
     app_icon = QtGui.QIcon()
     app_icon.addFile(os.getenv('APPDATA')+"\\kmt\\images\\icon.png", QtCore.QSize(140,100))
     app.setWindowIcon(app_icon)
+
+    try:
+        if sys.argv[1] == "ADMIN":
+            change_regedit()
+            kill = True
+    except:
+        pass
+
+    if kill == True:
+        sys.exit(0)
 
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
