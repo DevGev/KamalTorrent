@@ -1,5 +1,4 @@
-#Libtorrent .pyd needed to compile the program, it works best if you build this yourself 
+#Libtorrent .pyd needed to compile the program, it works best if you build this yourself
 /src/*.pyd
 /src/__pycache__
-#The "Binaries" folder contains executables for testing purposes 
-/binaries
+/src/binaries

@@ -21,7 +21,7 @@ def set_notification(notify_):
 	notify = notify_
 
 def torrent_to_magnet(file):
-	magnet = magneturi.from_torrent_file(file) 
+	magnet = magneturi.from_torrent_file(file)
 	return magnet
 
 def remove_item_que(index, all_items=False):
@@ -42,35 +42,35 @@ def torrent_pause():
 		pause = False
 	else:
 		pause = True
-		
+
 def abort():
 	global kill
 	kill = True
-	
+
 def set_que(_que):
 	global que
 	que.append(_que)
-	
+
 class Torrent(QThread):
 	countChanged = pyqtSignal(int)
 	statusChanged = pyqtSignal(str)
 	listChanged = pyqtSignal(int, str)
-	
+
 	def rerun(self, _magnet, path):
 		global indexing
 		indexing+=1
 		self.magnet = _magnet
 		self.run()
-	
+
 	def __init__(self, _path):
 		QThread.__init__(self)
 		global que
 		self.magnet = que[0]
 		self.path = _path
-			
+
 	def __del__(self):
-		self.wait()	
-	
+		self.wait()
+
 	def run(self):
 		global started, kill, pause, logpath, que, indexing, notify
 		print(que)
@@ -83,11 +83,11 @@ class Torrent(QThread):
 			return
 		params = {
 			'save_path': self.path}
-			
+
 		if self.magnet[:7] != "magnet:":
 			self.statusChanged.emit("Invalid magnet")
 			return
-		
+
 		link = self.magnet
 
 		try:
@@ -95,18 +95,18 @@ class Torrent(QThread):
 		except:
 			self.statusChanged.emit("Invalid magnet")
 			return
-			
+
 		ses.start_dht()
 
 		print('downloading metadata...')
-		
+
 		try:
 			while (not handle.has_metadata()):
 				time.sleep(1)
 		except:
 			self.countChanged.emit(0)
 			self.statusChanged.emit("Invalid magnet")
-		
+
 		started = True
 		torinfo = handle.get_torrent_info()
 		self.listChanged.emit(0, torinfo.name())
@@ -117,30 +117,30 @@ class Torrent(QThread):
 			state_str = ['queued', 'checking', 'downloading metadata', \
 					'downloading', 'finished', 'seeding', 'allocating']
 			print(s.progress * 100, 'complete (down:', s.download_rate / 1000, 'kb/s up:', s.upload_rate / 1000, 'kB/s peers:', s.num_peers, state_str[s.state])
-			
+
 			try:
 				self.countChanged.emit(int(s.progress * 100))
 				self.statusChanged.emit('down: ' + str(s.download_rate / 1000) + ' kb/s up: ' + str(s.upload_rate / 1000) + ' kB/s peers: ' + str(s.num_peers) + ' ' + str(state_str[s.state]))
 			except:
 				pass #Ignore progress bar error it will resume to a working state anyways
-			
+
 			ips = (handle.get_peer_info())
 			ip_info = []
 			for ip in ips:
 				_ip = ip.ip
-				ip_info.append(_ip)	
+				ip_info.append(_ip)
 				print(_ip)
-				
+
 			if logpath != "":
 					with open(logpath + "/kml.log", "a+") as F:
 						F.write('down: ' + str(s.download_rate / 1000) + ' kb/s up: ' + str(s.upload_rate / 1000) + ' kB/s peers: ' + str(s.num_peers) + ' ' + str(state_str[s.state]) + ' peer: ' + str(ip_info) + "\n")
-			
+
 			if pause == True:
 				handle.pause()
 				while not handle.status().paused:
 					self.statusChanged.emit("Pausing torrent download")
 					time.sleep(1)
-				
+
 				while 1:
 					if kill == True:
 						self.countChanged.emit(0)
@@ -153,7 +153,7 @@ class Torrent(QThread):
 					self.statusChanged.emit("Torrent download paused")
 					handle.pause()
 					time.sleep(1)
-            
+
 			if kill == True:
 				self.countChanged.emit(0)
 				self.countChanged.emit(101)
@@ -163,7 +163,7 @@ class Torrent(QThread):
 				kill = False
 				return
 			time.sleep(0.1)
-			
+
 		self.countChanged.emit(100)
 		self.statusChanged.emit("Download complete")
 		print("Done torrenting")

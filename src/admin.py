@@ -8,10 +8,9 @@ def isUserAdmin():
     higher. The failure causes a traceback to be printed and this
     function to return False.
     """
-    
+
     if os.name == 'nt':
         import win32security
-        # WARNING: requires Windows XP SP2 or higher!
         try:
             adminSid = win32security.CreateWellKnownSid(win32security.WinBuiltinAdministratorsSid, None)
             return win32security.CheckTokenMembership(None, adminSid)
@@ -40,11 +39,11 @@ def runAsAdmin(cmdLine=None, wait=True):
 
     if os.name != 'nt':
         raise RuntimeError("This function is only implemented on Windows.")
-    
+
     import win32api, win32con, win32event, win32process
     from win32com.shell.shell import ShellExecuteEx
     from win32com.shell import shellcon
-    
+
     python_exe = sys.executable
 
     if cmdLine is None:
@@ -56,7 +55,7 @@ def runAsAdmin(cmdLine=None, wait=True):
     cmdDir = ''
     showCmd = win32con.SW_SHOWNORMAL
     lpVerb = 'runas'  # causes UAC elevation prompt.
-    
+
     # print "Running", cmd, params
 
     # ShellExecute() doesn't seem to allow us to fetch the PID or handle
@@ -72,7 +71,7 @@ def runAsAdmin(cmdLine=None, wait=True):
                               lpParameters=params)
 
     if wait:
-        procHandle = procInfo['hProcess']    
+        procHandle = procInfo['hProcess']
         obj = win32event.WaitForSingleObject(procHandle, win32event.INFINITE)
         rc = win32process.GetExitCodeProcess(procHandle)
         #print "Process handle %s returned code %s" % (procHandle, rc)
