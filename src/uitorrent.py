@@ -173,17 +173,24 @@ class Ui_MainWindow(object):
         self.MagnetInput = QtWidgets.QLineEdit(self.centralwidget)
         self.MagnetInput.setGeometry(QtCore.QRect(550, 30, 151, 31))
         self.MagnetInput.setStyleSheet("background-color: rgb(64, 64, 64);  border: 1px solid grey;")
-        self.MagnetInput.setFont(QtGui.QFont("Cursive", 11))
+        self.MagnetInput.setFont(QtGui.QFont("Cantarell", 11))
         self.MagnetInput.setPlaceholderText("magnet: ")
         self.MagnetInput.setObjectName("MagnetInput")
 
         self.SearchInput = QtWidgets.QLineEdit(self.centralwidget)
         self.SearchInput.setGeometry(QtCore.QRect(2, 70, 390, 31))
         self.SearchInput.setStyleSheet("background-color: rgb(64, 64, 64);  border: 1px solid grey;")
-        self.SearchInput.setFont(QtGui.QFont("Cursive", 11))
+
+        self.SearchInput.setFont(QtGui.QFont("Cantarell", 11))
         self.SearchInput.setPlaceholderText("search: ")
         self.SearchInput.setObjectName("SearchInput")
 
+        self.SetSearchProvider = QtWidgets.QComboBox(self.centralwidget)
+        self.SetSearchProvider.setGeometry(QtCore.QRect(403, 110, 79, 20))
+        self.SetSearchProvider.setFont(QtGui.QFont("Mono", 6))
+        self.SetSearchProvider.addItem("Pirate Bay")
+        self.SetSearchProvider.addItem("1337X")
+        
         self.EndTorrent = QtWidgets.QPushButton(self.centralwidget)
         self.EndTorrent.setGeometry(QtCore.QRect(520, 71, 90, 27))
         self.EndTorrent.setStyleSheet("background-color: rgb(153, 0, 0);")
@@ -525,7 +532,7 @@ class Ui_MainWindow(object):
         if query == "ip[]":
             self.getip()
             return
-        self.parse_query = pyrateParser.Parse(query)
+        self.parse_query = pyrateParser.Parse(query, self.SetSearchProvider.currentText())
         self.parse_query.listChanged.connect(self.onSearchRes)
         self.parse_query.start()
 
