@@ -563,7 +563,7 @@ def change_regedit():
 
 def SetExeLinux():
     apath = os.path.abspath("./.kamaltorrent")
-    desktopdata = """[Desktop Entry]\nEncoding=UTF-8\nVersion=1.3\nType=Application\nTerminal=false\nExec="""+os.path.abspath(sys.argv[0])+"""\nName=KmTorrent\nIcon="""+apath+"/kmt/images/icon.png"+""""""
+    desktopdata = """[Desktop Entry]\nEncoding=UTF-8\nVersion=1.3\nType=Application\nTerminal=false\nExec="""+os.path.abspath(sys.argv[0])+"""\nName=KmTorrent\nIcon="""+apath+"/kmt/images/icon.png"+"""\nCategories=Network;"""
     os.system("touch /usr/share/applications/kmtorrent.desktop")
     with open("/usr/share/applications/kmtorrent.desktop", "w") as F:
         F.write(desktopdata)
