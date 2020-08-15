@@ -48,6 +48,34 @@ QProgressBar::chunk {
 }
 """
 
+DEFAULT_STYLE_MENU = """
+background-color: rgb(64, 64, 64); 
+color: #111111;
+
+QMenuBar::item {
+    background-color: 111111;
+    font-family: Cantarell;
+    font-size: 9;
+    spacing: 10px;
+}
+"""
+
+DEFAULT_STYLE_CMENU = """
+QMenu {
+    margin-left: 6px;
+}
+QMenu::item {
+    background-color: 111111;
+    font-family: Cantarell;
+    font-size: 7;
+}
+
+QMenu::item:selected { 
+    background-color: #363636;
+    padding-left: 4px;
+}
+"""
+
 installdir = ""
 if platform.system() == "Windows":
     installdir = os.getenv('APPDATA')
@@ -246,20 +274,28 @@ class Ui_MainWindow(object):
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setStyleSheet("background-color: rgb(64, 64, 64);")
-
+        self.menubar.setFont(QtGui.QFont("Cantarell", 9))
+        self.menubar.setStyleSheet(DEFAULT_STYLE_MENU)
+        
         self.menubar.setGeometry(QtCore.QRect(0, 0, 705, 24))
         self.menubar.setObjectName("menubar")
         self.menuMain = QtWidgets.QMenu(self.menubar)
-
+        
         self.menuTorrent = QtWidgets.QMenu(self.menubar)
         self.menuTorrent.setObjectName("menuTorrent")
+        self.menuTorrent.setStyleSheet(DEFAULT_STYLE_CMENU)
+
         self.menuSettings = QtWidgets.QMenu(self.menubar)
         self.menuSettings.setObjectName("menuSettings")
+        self.menuSettings.setStyleSheet(DEFAULT_STYLE_CMENU)
+        
         self.menuWeb = QtWidgets.QMenu(self.menubar)
         self.menuWeb.setObjectName("menuWeb")
+        self.menuWeb.setStyleSheet(DEFAULT_STYLE_CMENU)
+
         self.menuVPN = QtWidgets.QMenu(self.menubar)
         self.menuVPN.setObjectName("menuVPN")
+        self.menuVPN.setStyleSheet(DEFAULT_STYLE_CMENU)
 
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
