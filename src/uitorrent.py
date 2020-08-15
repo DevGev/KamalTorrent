@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5 import Qt
 import torrent
 import time
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import (QApplication, QDialog,
                              QProgressBar, QPushButton)
 from PyQt5.QtGui import QIcon
@@ -121,6 +121,7 @@ class Ui_MainWindow(object):
         self.TorrentProgress.setProperty("value", 0)
         self.TorrentProgress.setStyleSheet(DEFAULT_STYLE)
         self.TorrentProgress.setObjectName("TorrentProgress")
+        self.TorrentProgress.setFont(QtGui.QFont("Cantarell", 11))
 
         self.TorrentInformation = QtWidgets.QLabel(self.centralwidget)
         self.TorrentInformation.setGeometry(QtCore.QRect(2, 391, 480, 27))
@@ -143,28 +144,33 @@ class Ui_MainWindow(object):
         self.RemQue.setStyleSheet("background-color: rgb(153, 0, 0);")
         self.RemQue.setProperty("value", 0)
         self.RemQue.setObjectName("RemQue")
+        self.RemQue.setFont(QtGui.QFont("Cantarell", 10))
 
         self.AddQue = QtWidgets.QPushButton(self.centralwidget)
         self.AddQue.setGeometry(QtCore.QRect(610, 421, 91, 27))
         self.AddQue.setStyleSheet("background-color: rgb(52, 101, 164);")
         self.AddQue.setProperty("value", 0)
         self.AddQue.setObjectName("AddQue")
+        self.AddQue.setFont(QtGui.QFont("Cantarell", 10))
 
         self.SearchRes = QtWidgets.QListWidget(self.centralwidget)
         self.SearchRes.setGeometry(QtCore.QRect(2, 133, 480, 255))
         self.SearchRes.setStyleSheet("background-color: rgb(64, 64, 64);")
         self.SearchRes.setObjectName("SearchRes")
+        self.SearchRes.itemDoubleClicked.connect(lambda: self.add_to_que())
 
         self.StartSearch = QtWidgets.QPushButton(self.centralwidget)
         self.StartSearch.setGeometry(QtCore.QRect(402, 95, 80, 27))
         self.StartSearch.setStyleSheet("background-color: rgb(52, 101, 164);")
         self.StartSearch.setObjectName("StartSearch")
+        self.StartSearch.setFont(QtGui.QFont("Cantarell", 10))
 
         self.StartTorrent = QtWidgets.QPushButton(self.centralwidget)
         self.StartTorrent.setGeometry(QtCore.QRect(520, 72, 181, 27))
         self.StartTorrent.setStyleSheet("background-color: rgb(52, 101, 164);")
         self.StartTorrent.setObjectName("StartTorrent")
-
+        self.StartTorrent.setFont(QtGui.QFont("Cantarell", 10))
+        
         self.SetPath = QtWidgets.QPushButton(self.centralwidget)
         self.SetPath.setGeometry(QtCore.QRect(520, 30, 30, 31))
         self.SetPath.setIcon(QtGui.QIcon(installdir+'/kmt/images/dirsel.png'))
@@ -176,14 +182,15 @@ class Ui_MainWindow(object):
         self.MagnetInput.setFont(QtGui.QFont("Cantarell", 11))
         self.MagnetInput.setPlaceholderText("magnet: ")
         self.MagnetInput.setObjectName("MagnetInput")
+        self.MagnetInput.returnPressed.connect(lambda: self.add_to_que())
 
         self.SearchInput = QtWidgets.QLineEdit(self.centralwidget)
         self.SearchInput.setGeometry(QtCore.QRect(2, 93, 390, 31))
         self.SearchInput.setStyleSheet("background-color: rgb(64, 64, 64);  border: 1px solid grey;")
-
         self.SearchInput.setFont(QtGui.QFont("Cantarell", 11))
         self.SearchInput.setPlaceholderText("search: ")
         self.SearchInput.setObjectName("SearchInput")
+        self.SearchInput.returnPressed.connect(lambda: self.get_results(self.SearchInput.text()))
 
         self.SetSearchProvider = QtWidgets.QComboBox(self.centralwidget)
         self.SetSearchProvider.setGeometry(QtCore.QRect(302, 72, 90, 20))
@@ -303,9 +310,11 @@ class Ui_MainWindow(object):
         if platform.system() == "Windows":
             self.menubar.addAction(self.menuVPN.menuAction())
 
+        
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         self.StartTorrent.clicked.connect(lambda: self.start_magnet_onclick(self.MagnetInput.text()))
+
         self.SetPath.clicked.connect(lambda: self.set_output_path())
         self.StartSearch.clicked.connect(lambda: self.get_results(self.SearchInput.text()))
         self.SearchRes.itemClicked.connect(lambda: self.on_enter())
