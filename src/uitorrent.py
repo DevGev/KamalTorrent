@@ -151,12 +151,12 @@ class Ui_MainWindow(object):
         self.AddQue.setObjectName("AddQue")
 
         self.SearchRes = QtWidgets.QListWidget(self.centralwidget)
-        self.SearchRes.setGeometry(QtCore.QRect(2, 110, 480, 274))
+        self.SearchRes.setGeometry(QtCore.QRect(2, 133, 480, 255))
         self.SearchRes.setStyleSheet("background-color: rgb(64, 64, 64);")
         self.SearchRes.setObjectName("SearchRes")
 
         self.StartSearch = QtWidgets.QPushButton(self.centralwidget)
-        self.StartSearch.setGeometry(QtCore.QRect(402, 72, 80, 27))
+        self.StartSearch.setGeometry(QtCore.QRect(402, 95, 80, 27))
         self.StartSearch.setStyleSheet("background-color: rgb(52, 101, 164);")
         self.StartSearch.setObjectName("StartSearch")
 
@@ -178,7 +178,7 @@ class Ui_MainWindow(object):
         self.MagnetInput.setObjectName("MagnetInput")
 
         self.SearchInput = QtWidgets.QLineEdit(self.centralwidget)
-        self.SearchInput.setGeometry(QtCore.QRect(2, 70, 390, 31))
+        self.SearchInput.setGeometry(QtCore.QRect(2, 93, 390, 31))
         self.SearchInput.setStyleSheet("background-color: rgb(64, 64, 64);  border: 1px solid grey;")
 
         self.SearchInput.setFont(QtGui.QFont("Cantarell", 11))
@@ -186,10 +186,40 @@ class Ui_MainWindow(object):
         self.SearchInput.setObjectName("SearchInput")
 
         self.SetSearchProvider = QtWidgets.QComboBox(self.centralwidget)
-        self.SetSearchProvider.setGeometry(QtCore.QRect(403, 110, 79, 20))
+        self.SetSearchProvider.setGeometry(QtCore.QRect(302, 72, 90, 20))
         self.SetSearchProvider.setFont(QtGui.QFont("Mono", 6))
         self.SetSearchProvider.addItem("Pirate Bay")
         self.SetSearchProvider.addItem("1337X")
+        self.SetSearchProvider.addItem("eztv")
+        
+        self.SetSearchCat = QtWidgets.QComboBox(self.centralwidget)
+        self.SetSearchCat.setGeometry(QtCore.QRect(2, 72, 100, 20))
+        self.SetSearchCat.setFont(QtGui.QFont("Mono", 6))
+        self.SetSearchCat.addItem("All")
+        self.SetSearchCat.addItem("Music")
+        self.SetSearchCat.addItem("Movies")
+        self.SetSearchCat.addItem("TV Shows")
+        self.SetSearchCat.addItem("PC Games")
+        self.SetSearchCat.addItem("UNIX Apps")
+        self.SetSearchCat.addItem("Windows Apps")
+
+        self.SetSearchSizeFilter = QtWidgets.QComboBox(self.centralwidget)
+        self.SetSearchSizeFilter.setGeometry(QtCore.QRect(102, 72, 100, 20))
+        self.SetSearchSizeFilter.setFont(QtGui.QFont("Mono", 6))
+        self.SetSearchSizeFilter.addItem("All")
+        self.SetSearchSizeFilter.addItem("< 10 MB")
+        self.SetSearchSizeFilter.addItem("< 100 MB")
+        self.SetSearchSizeFilter.addItem("< 1 GB")
+        self.SetSearchSizeFilter.addItem("< 10 GB")
+        
+        self.SetSearchSeedFilter = QtWidgets.QComboBox(self.centralwidget)
+        self.SetSearchSeedFilter.setGeometry(QtCore.QRect(202, 72, 100, 20))
+        self.SetSearchSeedFilter.setFont(QtGui.QFont("Mono", 6))
+        self.SetSearchSeedFilter.addItem("All")
+        self.SetSearchSeedFilter.addItem("> 10 Seeders")
+        self.SetSearchSeedFilter.addItem("> 50 Seeders")
+        self.SetSearchSeedFilter.addItem("> 90 Seeders")
+        self.SetSearchSeedFilter.addItem("> 1k Seeders")
         
         self.EndTorrent = QtWidgets.QPushButton(self.centralwidget)
         self.EndTorrent.setGeometry(QtCore.QRect(520, 71, 90, 27))
@@ -281,6 +311,7 @@ class Ui_MainWindow(object):
         self.SearchRes.itemClicked.connect(lambda: self.on_enter())
         self.actionLog.triggered.connect(lambda: self.set_logging())
 
+        self.SetSearchProvider.currentIndexChanged.connect(lambda: self.check_provider())
         self.AddQue.clicked.connect(lambda: self.add_to_que())
         self.RemQue.clicked.connect(lambda: self.rem_que())
 
@@ -333,6 +364,13 @@ class Ui_MainWindow(object):
                     self.TorrentInformation.setText("Invalid .torrent file")
         except:
             pass
+
+    def check_provider(self):
+        if self.SetSearchProvider.currentText() == "eztv":
+            self.SetSearchCat.setCurrentIndex(0)
+            self.SetSearchCat.setEnabled(False)
+        else:
+            self.SetSearchCat.setEnabled(True)
 
     def notifier_set(self):
         global notify
@@ -447,6 +485,8 @@ class Ui_MainWindow(object):
 
     def add_to_que(self):
         global magnets, names
+        if self.MagnetInput.text() == "":
+            return
         try:
             index = magnets.index(self.MagnetInput.text())
 
@@ -532,7 +572,7 @@ class Ui_MainWindow(object):
         if query == "ip[]":
             self.getip()
             return
-        self.parse_query = pyrateParser.Parse(query, self.SetSearchProvider.currentText())
+        self.parse_query = pyrateParser.Parse(query, self.SetSearchProvider.currentText(), self.SetSearchCat.currentText(), self.SetSearchSizeFilter.currentText(), self.SetSearchSeedFilter.currentText())
         self.parse_query.listChanged.connect(self.onSearchRes)
         self.parse_query.start()
 

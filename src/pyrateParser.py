@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+from decimal import Decimal
 import urllib.request
 import requests
 from bs4 import BeautifulSoup, SoupStrainer
@@ -9,18 +8,33 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QDialog, QProgressBar, \
     QPushButton
 
+d = {
+        'T': 12,
+        'G': 9,
+        'M': 6,
+        'K': 3
+}
+def text_to_num(text):
+        text = text.replace("B", "")
+        if text[-1] in d:
+            num, magnitude = text[:-1], text[-1]
+            return float(Decimal(num) * 10 ** d[magnitude])
+        else:
+            return float(Decimal(text))
 
 class Parse(QThread):
-
     listChanged = pyqtSignal(list, list, list, list, list)
 
-    def __init__(self, _query, _provider):
+    def __init__(self, _query, _provider, _category, _sizelimit, _seedmin):
         QThread.__init__(self)
         self.query = _query
         self.provider = _provider
+        self.category = _category
+        self.sizelimit = _sizelimit
+        self.seedmin = _seedmin
 
     def run(self):
-        print(self.provider)
+        print(self.provider, self.query, self.category, self.sizelimit, self.seedmin)
         urls = [
             'https://thepiratebay0.org',
             'https://pirateproxy.live',
@@ -38,15 +52,46 @@ class Parse(QThread):
             self.query = self.query[6:]
         except:
             url = 'https://thepiratebay0.org'
-        endurl = "/1/99/0"
         self.query = self.query.replace(' ', '%20')
-        
+        mid = "/search/"
+
         if self.provider == "1337X":
             url = "https://1337x.to"
-            endurl = "/0/"
+            if self.category == "All":
+                endurl = "0/"
+            else:
+                mid = "/category-search/"
+            if self.category == "Music" or self.category == "Movies":
+                endurl = self.category + "/0/"
+            if self.category == "TV Shows":
+                endurl = "TV/0/"
+            if self.category == "PC Games":
+                endurl = "Games/0/"
+            if self.category == "UNIX Apps" or self.category == "Windows Apps":
+                endurl = "Apps/0/"
+
+        if self.provider == "Pirate Bay":
+            if self.category == "All":
+                endurl = "1/99/0"
+            if self.category == "Music":
+                endurl = "1/99/101"
+            if self.category == "Movies":
+                endurl = "1/99/201"
+            if self.category == "TV Shows":
+                endurl = "1/99/205"
+            if self.category == "PC Games":
+                endurl = "1/99/401"
+            if self.category == "UNIX Apps":
+                endurl = "1/99/303"
+            if self.category == "Windows Apps":
+                endurl = "1/99/301"
+
+        if self.provider == "eztv":
+            url = "https://eztv.io"
+            endurl = ""
 
         hdr = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
-        resp = requests.get(url + '/search/' + self.query + endurl,
+        resp = requests.get(url + mid + self.query + "/" + endurl,
                             headers=hdr).text
         soup = BeautifulSoup(resp, features='lxml')
         self.magnets = []
@@ -65,11 +110,38 @@ class Parse(QThread):
                     parts = link['href'].replace(url, '').split('/')
                     self.titles.append(parts[3])
 
+        if self.provider == "eztv":
+            sizes =  []
+            for link in soup.find_all('a', class_="epinfo"):
+                title = link['title'].split("(")[0]
+                size = link['title'].split("(")[1].replace(")", "").replace("(","")
+                sizes.append(str(size))
+                self.titles.append(str(title).replace(" ", "_"))
+            for link in soup.find_all('a', class_="magnet"):
+                self.magnets.append(str(link['href']))
+            i = 0
+            update = []
+            for upd in soup.find_all('td', {'class':["forum_thread_post"], 'align':["center"]}):
+                if len(upd.contents) == 1 and i != 3:
+                    i += 1
+                    if i == 2:
+                        update.append(str(upd.contents[0]))
+                else:
+                    i = 0
+            for seeds in soup.find_all('td', {'class':["forum_thread_post_end"]}):
+                if seeds.contents[0] != "-":
+                    self.seeders.append(str(seeds.contents[0]).replace(">", "<").split("<")[2])
+                else:
+                    self.seeders.append("0")
+                self.leechers.append("-")
+            for x in range(0, len(sizes)):
+                self.desc.append("Size: " + sizes[x] + " Uploaded " + update[x] + " ago")
+
         if self.provider == '1337X':
             for link in soup.find_all('a', href=True):
                 if (link['href'])[:8] == '/torrent':
                     parts = link['href'].split('/')
-                    self.titles.append(str(parts[3]))
+                    self.titles.append(str(parts[3]).replace("-", "_"))
                     resp2 = requests.get('https://1337x.to'
                             + link['href']).text
                     soup2 = BeautifulSoup(resp2, features='lxml')
@@ -123,9 +195,37 @@ class Parse(QThread):
                 self.desc.append(a[4].replace('Size', 'Size:')
                              + 'Uploaded by: ' + a[6])
 
+        if self.sizelimit != "All" or self.seedmin != "All":
+            if self.seedmin == "All":
+                self.seedmin = -1
+            else:    
+                self.seedmin = self.seedmin.replace(">", "").replace("k", "000").replace("Seeders", "")
+            
+            if self.sizelimit == "All":
+                self.sizelimit = "1000TB"
+            s, l, m, t, d = [], [], [], [], []
+            x = 0
+            breakpoint = text_to_num(self.sizelimit.replace(" ", "").replace("<", ""))
+            
+            while 1:
+                if x == len(self.desc):
+                    break
+                sdata = self.desc[x].split(" ")
+                y = sdata.index("Size:")
+                size = (sdata[y+1]+sdata[y+2]).replace(" ", "")
+                if self.provider == "Pirate Bay":
+                    size = sdata[y+1].replace("i", "").replace(" ", "")
+                if text_to_num(size) < breakpoint:
+                    if int(self.seeders[x]) > int(self.seedmin):
+                        s.append(self.seeders[x])
+                        l.append(self.leechers[x])
+                        m.append(self.magnets[x])
+                        t.append(self.titles[x])
+                        d.append(self.desc[x])
+                x+=1
+            self.listChanged.emit(t, m, s, l, d)
+            return
+
         self.listChanged.emit(self.titles, self.magnets, self.seeders,
                               self.leechers, self.desc)
-
-
-
 			
