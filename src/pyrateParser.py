@@ -55,36 +55,29 @@ class Parse(QThread):
         self.query = self.query.replace(' ', '%20')
         mid = "/search/"
 
+        
+        xcats = {"All":"0/", "Music":"Music/0/", "Movies":"Movies/0/", "TV Shows":"TV/0/", "PC Games":"Games/0/", "UNIX Apps":"Apps/0/", "Windows Apps": "Apps/0/"}
+
         if self.provider == "1337X":
             url = "https://1337x.to"
             if self.category == "All":
                 endurl = "0/"
             else:
                 mid = "/category-search/"
-            if self.category == "Music" or self.category == "Movies":
-                endurl = self.category + "/0/"
-            if self.category == "TV Shows":
-                endurl = "TV/0/"
-            if self.category == "PC Games":
-                endurl = "Games/0/"
-            if self.category == "UNIX Apps" or self.category == "Windows Apps":
-                endurl = "Apps/0/"
+                for x in range(0, len(list(xcats.keys()))):
+                    if list(xcats.keys())[x] == self.category:
+                        endurl = list(xcats.values())[x]
 
+        if self.provider == "skytorrents":
+            mid = "/?search="
+            url = "https://www.skytorrents.to"
+            endurl = ""
+
+        piratebaycats = {"All":"1/99/0", "Music":"1/99/101", "Movies":"1/99/201", "TV Shows":"1/99/205", "PC Games":"1/99/401", "UNIX Apps":"1/99/303", "Windows Apps":"1/99/301"}
         if self.provider == "Pirate Bay":
-            if self.category == "All":
-                endurl = "1/99/0"
-            if self.category == "Music":
-                endurl = "1/99/101"
-            if self.category == "Movies":
-                endurl = "1/99/201"
-            if self.category == "TV Shows":
-                endurl = "1/99/205"
-            if self.category == "PC Games":
-                endurl = "1/99/401"
-            if self.category == "UNIX Apps":
-                endurl = "1/99/303"
-            if self.category == "Windows Apps":
-                endurl = "1/99/301"
+            for x in range(0, len(list(piratebaycats.keys()))):
+                if list(piratebaycats.keys())[x] == self.category:
+                    endurl = list(piratebaycats.values())[x]
 
         if self.provider == "eztv":
             url = "https://eztv.io"
@@ -93,6 +86,7 @@ class Parse(QThread):
         hdr = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
         resp = requests.get(url + mid + self.query + "/" + endurl,
                             headers=hdr).text
+        print(url + mid + self.query + "/" + endurl)
         soup = BeautifulSoup(resp, features='lxml')
         self.magnets = []
         self.titles = []
@@ -136,6 +130,31 @@ class Parse(QThread):
                 self.leechers.append("-")
             for x in range(0, len(sizes)):
                 self.desc.append("Size: " + sizes[x] + " Uploaded " + update[x] + " ago")
+        
+        if self.provider == 'skytorrents':
+            for name in soup.find_all('tr', class_="result"):
+                n = name.find('a', href=True)
+                self.titles.append(n.get_text().replace(" ", "_"))
+            for link in soup.find_all('a', href=True):
+                if link['href'][:7] == "magnet:":
+                    self.magnets.append(link['href'])
+            for seed in soup.find_all('td', {"style":"text-align: center;color:green;"}):
+                self.seeders.append(seed.get_text())
+            for leech in soup.find_all('td', {"style":"text-align: center;color:red;"}):
+                self.leechers.append(leech.get_text())
+            
+            i = 0
+            sizes, update = [], []
+            for info in soup.find_all('td', class_="is-hidden-touch"):
+                if i == 3:
+                    i = 0
+                if i == 0:
+                    sizes.append(info.get_text())
+                if i == 2:
+                    update.append(info.get_text())
+                i+=1
+            for x in range(0, len(sizes)):
+                self.desc.append("Size: " + sizes[x] + " Uploaded: " + update[x])
 
         if self.provider == '1337X':
             for link in soup.find_all('a', href=True):

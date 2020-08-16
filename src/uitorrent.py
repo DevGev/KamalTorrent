@@ -136,7 +136,7 @@ class Ui_MainWindow(object):
                 path = os.path.dirname(installdir+"/kmt/torrents")
             else:
                 path = os.path.dirname(".")
-
+        
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
 
@@ -226,6 +226,7 @@ class Ui_MainWindow(object):
         self.SetSearchProvider.addItem("Pirate Bay")
         self.SetSearchProvider.addItem("1337X")
         self.SetSearchProvider.addItem("eztv")
+        self.SetSearchProvider.addItem("skytorrents")
         
         self.SetSearchCat = QtWidgets.QComboBox(self.centralwidget)
         self.SetSearchCat.setGeometry(QtCore.QRect(2, 72, 100, 20))
@@ -346,7 +347,13 @@ class Ui_MainWindow(object):
         if platform.system() == "Windows":
             self.menubar.addAction(self.menuVPN.menuAction())
 
-        
+        try:
+            with open(installdir+"/kmt/settings/DefaultProvider.setting", "r") as F:
+                self.SetSearchProvider.setCurrentText(F.read())
+        except:
+            self.SetSearchProvider.setCurrentText("Pirate Bay")
+        self.check_provider()
+
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         self.StartTorrent.clicked.connect(lambda: self.start_magnet_onclick(self.MagnetInput.text()))
@@ -411,7 +418,16 @@ class Ui_MainWindow(object):
             pass
 
     def check_provider(self):
-        if self.SetSearchProvider.currentText() == "eztv":
+        global path
+        try:
+            os.mkdir(installdir+"/kmt/settings")
+        except:
+            pass
+
+        with open(installdir+"/kmt/settings/DefaultProvider.setting", "w") as F:
+            F.write(self.SetSearchProvider.currentText())
+        
+        if self.SetSearchProvider.currentText() == "eztv" or self.SetSearchProvider.currentText() == "skytorrents":
             self.SetSearchCat.setCurrentIndex(0)
             self.SetSearchCat.setEnabled(False)
         else:
