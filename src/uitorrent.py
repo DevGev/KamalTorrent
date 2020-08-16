@@ -320,7 +320,7 @@ class Ui_MainWindow(object):
         self.actionASSOC = QtWidgets.QAction(MainWindow)
         self.actionASSOC.setObjectName("actionASSOC")
 
-        self.actionNotification = QtWidgets.QAction(MainWindow, checkable=True)
+        self.actionNotification = QtWidgets.QAction(MainWindow)
         self.actionNotification.setObjectName("actionNotification")
 
         self.actionDEFAULTDIR = QtWidgets.QAction(MainWindow)
@@ -420,9 +420,11 @@ class Ui_MainWindow(object):
     def notifier_set(self):
         global notify
         if notify == True:
+            self.actionNotification.setText("Notification")
             notify = False
             return
         if notify == False:
+            self.actionNotification.setText("Notification ✓")
             notify = True
             return
 
@@ -655,7 +657,7 @@ def change_regedit():
 
 def SetExeLinux():
     apath = os.path.abspath("./.kamaltorrent")
-    desktopdata = """[Desktop Entry]\nEncoding=UTF-8\nVersion=1.3\nType=Application\nTerminal=false\nExec="""+os.path.abspath(sys.argv[0])+"""\nName=KmTorrent\nIcon="""+apath+"/kmt/images/icon.png"+"""\nCategories=Network;"""
+    desktopdata = """[Desktop Entry]\nEncoding=UTF-8\nVersion=1.3\nType=Application\nTerminal=false\nExec="""+os.path.abspath(sys.argv[0])+"""\nName=KmTorrent\nComment=Modern torrent client\nIcon="""+apath+"/kmt/images/icon.png"+"""\nCategories=Network;"""
     os.system("touch /usr/share/applications/kmtorrent.desktop")
     with open("/usr/share/applications/kmtorrent.desktop", "w") as F:
         F.write(desktopdata)
