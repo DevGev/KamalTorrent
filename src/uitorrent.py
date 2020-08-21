@@ -264,6 +264,7 @@ class Ui_MainWindow(object):
         self.EndTorrent.setText("Abort")
         self.EndTorrent.hide()
         self.EndTorrent.clicked.connect(lambda: torrent.abort())
+        self.EndTorrent.setFont(QtGui.QFont("Cantarell", 10))
 
         self.PauseTorrent = QtWidgets.QPushButton(self.centralwidget)
         self.PauseTorrent.setGeometry(QtCore.QRect(610, 71, 91, 27))
@@ -272,6 +273,7 @@ class Ui_MainWindow(object):
         self.PauseTorrent.setText("Pause")
         self.PauseTorrent.hide()
         self.PauseTorrent.clicked.connect(lambda: self.pause())
+        self.PauseTorrent.setFont(QtGui.QFont("Cantarell", 10))
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
@@ -576,7 +578,7 @@ class Ui_MainWindow(object):
         torrent = self.SearchRes.currentItem().text().replace(" ", "_")
         index = names.index(torrent)
         self.MagnetInput.setText(magnets[index])
-        self.TorrentInformation.setText("Seeders: " + seeders[index] + "  Leechers: " + leechers[index] + " " + descs[index])
+        self.TorrentInformation.setText("Seeders: " + seeders[index] + " Leechers: " + leechers[index] + " " + descs[index])
 
     def set_output_path(self):
         global path
@@ -632,6 +634,8 @@ class Ui_MainWindow(object):
         self.TorrentInformation.setText(value)
 
     def get_results(self, query):
+        if query == "":
+            return
         if query == "ip[]":
             self.getip()
             return
