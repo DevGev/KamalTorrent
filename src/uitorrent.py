@@ -368,6 +368,7 @@ class Ui_MainWindow(object):
         self.SetSearchProvider.currentIndexChanged.connect(lambda: self.check_provider())
         self.AddQue.clicked.connect(lambda: self.add_to_que())
         self.RemQue.clicked.connect(lambda: self.rem_que())
+        self.ListOfTorrents.itemDoubleClicked.connect(lambda: self.rem_que())
 
         self.OpenFolder.triggered.connect(lambda: self.open_default_folder())
         self.actionGit.triggered.connect(lambda: self.open_github())
@@ -601,8 +602,8 @@ class Ui_MainWindow(object):
 
         if len(seeders) == 0:
             self.TorrentInformation.setText("No search results found")
-        elif self.TorrentInformation.text() == "No search results found" and len(seeders) != 0:
-            self.TorrentInformation.setText("")
+        else:
+            self.TorrentInformation.setText("Found " + str(len(seeders)) + " results")
 
         for x in range(0, len(seeders)):
             self.SearchRes.addItem(_names[x].replace("_", " "))
@@ -635,6 +636,7 @@ class Ui_MainWindow(object):
 
     def get_results(self, query):
         if query == "":
+            self.TorrentInformation.setText("Invalid query")
             return
         if query == "ip[]":
             self.getip()
