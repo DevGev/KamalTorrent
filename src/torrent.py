@@ -123,16 +123,6 @@ class Torrent(QThread):
                 'seeding',
                 'allocating',
                 ]
-            print (
-                s.progress * 100,
-                'complete (down:',
-                s.download_rate / 1000,
-                'kb/s up:',
-                s.upload_rate / 1000,
-                'kB/s peers:',
-                s.num_peers,
-                state_str[s.state] + ' ' + utime,
-                )
 
             try:
                 self.countChanged.emit(int(s.progress * 100))
@@ -148,8 +138,7 @@ class Torrent(QThread):
             for ip in ips:
                 _ip = ip.ip
                 ip_info.append(_ip)
-                print(_ip)
-
+            
             if logpath != '':
                 with open(logpath + '/kml.log', 'a+') as F:
                     F.write('down: ' + str(s.download_rate / 1000)
@@ -203,7 +192,3 @@ class Torrent(QThread):
                 self.statusChanged.emit('Status: Idle')
                 que = []
                 return
-
-
-
-			

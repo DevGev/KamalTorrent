@@ -88,17 +88,21 @@ def install():
     if platform.system() == "Windows" and not os.path.exists(installdir):
         os.mkdir(installdir+"\\kmt\\")
         os.mkdir(installdir+"\\kmt\\images")
+        os.mkdir(installdir+"\\kmt\\audio")
         urllib.request.urlretrieve("https://i.postimg.cc/8zNq5ZH7/dirsel.png", installdir+"\\kmt\\images\\dirsel.png")
         urllib.request.urlretrieve("https://i.postimg.cc/gch5HCtw/kmtorrentlogo.png", installdir+"\\kmt\\images\\KmTorrentLogo.png")
         urllib.request.urlretrieve("https://i.postimg.cc/LXGZhwdL/KmIcon.png", installdir+"\\kmt\\images\\icon.png")
-    if platform.system() == "Linux" and not os.path.exists(installdir):
+        urllib.request.urlretrieve("https://nonconformist-root.000webhostapp.com/uploads/[457KB]PersianNotification.wav", installdir+"\\kmt\\audio\\PersianNotification.wav")
+    elif platform.system() == "Linux" and not os.path.exists(installdir):
         original_umask = os.umask(0)
         os.mkdir(installdir)
         os.mkdir(installdir+"/kmt/")
         os.mkdir(installdir+"/kmt/images")
+        os.mkdir(installdir+"/kmt/audio")
         urllib.request.urlretrieve("https://i.postimg.cc/8zNq5ZH7/dirsel.png", installdir+"/kmt/images/dirsel.png")
         urllib.request.urlretrieve("https://i.postimg.cc/gch5HCtw/kmtorrentlogo.png", installdir+"/kmt/images/KmTorrentLogo.png")
         urllib.request.urlretrieve("https://i.postimg.cc/LXGZhwdL/KmIcon.png", installdir+"/kmt/images/icon.png")
+        urllib.request.urlretrieve("https://nonconformist-root.000webhostapp.com/uploads/[457KB]PersianNotification.wav", installdir+"/kmt/audio/PersianNotification.wav")
 
 class Ui_MainWindow(object):
     def setAssoc(self):
@@ -628,6 +632,7 @@ class Ui_MainWindow(object):
             self.EndTorrent.hide()
             self.PauseTorrent.hide()
             self.StartTorrent.show()
+            self.TorrentProgress.setValue(value)
             return
         self.TorrentProgress.setValue(value)
 
